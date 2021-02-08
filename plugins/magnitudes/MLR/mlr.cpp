@@ -50,7 +50,7 @@ ADD_SC_PLUGIN(
 	"MLr GNS magnitude, J. Ristau method",
 	"Derived from MLh magnitude & Sc3 Tutorial methods, J.Salichon, GNS Science New Zealand, J.Becker, Gempa", 
 	0, 0, 1
-);
+)
 
 
 namespace {
@@ -86,15 +86,25 @@ class Magnitude_MLR : public Processing::MagnitudeProcessor {
 			// Reset the configuration 
 			list_of_parametersets.clear();
 			try {
-				// Read the settings variable MLr.params. This can be found in the applications
+				// Read the settings variable magnitudes.MLr.params. This can be found in the applications
 				// configuration file at:
-				// module.trunk.global.MLr.params
+				// module.trunk.global.magnitudes.MLr.params
 				//   or per station (highest priority)
-				// module.trunk.NZ.WEL.MLr.params
-				if ( !initParameters(list_of_parametersets, settings.getString("MLr.params")) )
+				// module.trunk.NZ.WEL.magnitudes.MLr.params
+				if ( !initParameters(list_of_parametersets, settings.getString("magnitudes.MLr.params")) ) {
 					return false;
+				}
 			}
-			catch ( ... ) {}
+			catch ( ... ) {
+				try {
+					if ( !initParameters(list_of_parametersets, settings.getString("MLr.params")) ) {
+						return false;
+					}
+					SEISCOMP_WARNING("Configure magnitudes.MLr.params in global bindings. "
+					                 "The old parameter MLr.params has been deprecated");
+				}
+				catch ( ... ) {}
+			}
 
 			return true;
 		}
@@ -111,7 +121,7 @@ class Magnitude_MLR : public Processing::MagnitudeProcessor {
 		      const DataModel::Amplitude *,
 		      double &value)
 		{
-			if ( delta < DELTA_MIN || delta > DELTA_MAX )
+			if ( (delta < DELTA_MIN) || (delta > DELTA_MAX) )
 				return DistanceOutOfRange;
 
 			if ( depth > DEPTH_MAX )
@@ -141,7 +151,7 @@ class Magnitude_MLR : public Processing::MagnitudeProcessor {
 
 				param_struct new_paramset;
 				if ( !Core::fromString(new_paramset.dist, range_str) ) {
-					SEISCOMP_ERROR("MLr: %s: range is not a numeric value",
+					SEISCOMP_ERROR("%s: range is not a numeric value",
 					               params.c_str());
 					return false;
 				}
@@ -152,7 +162,7 @@ class Magnitude_MLR : public Processing::MagnitudeProcessor {
 				}
 				else {
 					if ( !Core::fromString(new_paramset.A, A_str) ) {
-						SEISCOMP_ERROR("MLr: %s: not a numeric value",
+						SEISCOMP_ERROR("%s: not a numeric value",
 						               A_str.c_str());
 						return false;
 					}
@@ -219,17 +229,17 @@ class Magnitude_MLR : public Processing::MagnitudeProcessor {
 			// select the right set depending on the distance
 			selected_parameterset = selectParameters(hypdistkm, list_of_parametersets);
 
-			SEISCOMP_DEBUG("epdistkm: %f\n",epdistkm);
-			SEISCOMP_DEBUG("hypdistkm: %f\n",hypdistkm);
+			SEISCOMP_DEBUG("Epdistkm: %f km",epdistkm);
+			SEISCOMP_DEBUG("Hypdistkm: %f km",hypdistkm);
 
 			if ( selected_parameterset.nomag ) {
-				SEISCOMP_DEBUG( "epicenter distance out of configured range, no magnitude");
+				SEISCOMP_DEBUG("Epicentral distance out of configured range, no magnitude");
 				return DistanceOutOfRange;
 			}
 			else {
 				SEISCOMP_DEBUG("The selected range is: %f", selected_parameterset.dist);
-				SEISCOMP_DEBUG("A:     %f", selected_parameterset.A);
-				//SEISCOMP_DEBUG("MLr: station %s.%s: %s",settings.networkCode.c_str(), settings.stationCode.c_str(),s.c_str());
+				SEISCOMP_DEBUG("  + A  :   %f", selected_parameterset.A);
+				//SEISCOMP_DEBUG("Station %s.%s: %s",settings.networkCode.c_str(), settings.stationCode.c_str(),s.c_str());
 
 				// ORI(sed): *mag = log10(amplitude)  + selected_parameterset.A * hypdistkm + selected_parameterset.B;
 				// JRistau: *mag = log10(amplitude) - Log(Amp(hypdistkm)) + Selected_parameterset.A  ;
@@ -238,12 +248,12 @@ class Magnitude_MLR : public Processing::MagnitudeProcessor {
 				LogAmpREF = 0.2869 - (1.272 * 1e-3) * hypdistkm - (1.493 * log10(hypdistkm) ) ;
 
 				// magTemp = log10(amplitude) - LogAmpREF + StatCorr ;
-				// A is  defined as STATION dependent ie. module.trunk.NZ.WEL.MLr.params ;
+				// A is  defined as STATION dependent ie. module.trunk.NZ.WEL.magnitudes.MLr.params ;
 				// Not corrected stations: Default is 0. Use nomag option to disable; 
 				magTemp = log10(amplitude) - LogAmpREF + selected_parameterset.A ;
 				*mag = magTemp ;
 
-				SEISCOMP_DEBUG("Mlr:     %f", *mag);
+				SEISCOMP_DEBUG("  + Mlr:   %f", *mag);
 				return OK;
 			}
 		}
