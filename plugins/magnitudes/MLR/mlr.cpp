@@ -119,6 +119,7 @@ class Magnitude_MLR : public Processing::MagnitudeProcessor {
 		      const DataModel::Origin *,
 		      const DataModel::SensorLocation *,
 		      const DataModel::Amplitude *,
+		      const Locale *,
 		      double &value)
 		{
 			if ( (delta < DELTA_MIN) || (delta > DELTA_MAX) )
